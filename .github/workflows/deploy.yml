@@ -3,6 +3,9 @@ name: 日記を公開
 on:
   push:
     branches: [master]
+    # メモ (下書き) を保存しただけなら、公開し直さない
+    paths-ignore:
+      - "_drafts/**"
   # 利用制限などで整形できずに残った下書きを、1日1回 (日本時間 6:17) 整形し直す
   schedule:
     - cron: "17 21 * * *"

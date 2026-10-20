@@ -108,7 +108,20 @@
   color: var(--card);
   cursor: pointer;
 }
-.w-save:disabled { opacity: 0.5; }
+.w-save:disabled, .w-memo:disabled { opacity: 0.5; }
+.w-actions { display: grid; grid-template-columns: 1fr 1.6fr; gap: 10px; }
+.w-memo {
+  font: inherit;
+  font-size: 1rem;
+  min-height: 52px;
+  border: 1px solid var(--accent);
+  border-radius: 14px;
+  background: var(--card);
+  color: var(--accent);
+  cursor: pointer;
+}
+.w-memo[hidden] + .w-save { grid-column: 1 / -1; }
+.w-memo-item .au { color: var(--accent); }
 .w-status { min-height: 1.6em; margin: 10px 2px; font-size: 0.9rem; color: var(--ink-soft); }
 .w-status[data-kind="error"] { color: #b8615a; }
 .w-status[data-kind="ok"] { color: var(--accent); }

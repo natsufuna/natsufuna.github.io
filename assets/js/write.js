@@ -85,6 +85,13 @@ async function putFile(path, base64, message, sha) {
   });
 }
 
+async function deleteFile(path, sha, message) {
+  return gh(`${repoPath()}/contents/${encPath(path)}`, {
+    method: "DELETE",
+    body: JSON.stringify({ message, sha, branch: cfg().branch }),
+  });
+}
+
 async function listPaths(prefix) {
   const t = await gh(`${repoPath()}/git/trees/${encodeURIComponent(cfg().branch)}?recursive=1`);
   return (t?.tree || []).filter((x) => x.type === "blob" && x.path.startsWith(prefix)).map((x) => x.path);
@@ -99,6 +106,7 @@ const state = {
   tags: new Set(),
   knownTags: new Set(),
   editing: null, // { path, sha, fm }
+  fromMemo: null, // { path, sha } メモ (下書き) から書いているとき
   usedMic: false,
 };
 
@@ -132,12 +140,14 @@ function saveDraft() {
       private: $("w-private").checked,
       tidy: $("w-tidy").checked,
       editing: state.editing,
+      fromMemo: state.fromMemo,
     }),
   );
 }
 
 function resetForm() {
   state.editing = null;
+  state.fromMemo = null;
   state.usedMic = false;
   state.tags = new Set();
   state.category = "diary";
@@ -157,10 +167,11 @@ function resetForm() {
 function restoreDraft() {
   let d = null;
   try { d = JSON.parse(store.get(K.draft) || "null"); } catch {}
-  if (!d || (!d.body && !d.editing)) return resetForm();
+  if (!d || (!d.body && !d.editing && !d.fromMemo)) return resetForm();
   state.date = d.date || diaryDateOf(new Date(), cfg().cutoff);
   state.tags = new Set(d.tags || []);
   state.editing = d.editing || null;
+  state.fromMemo = d.fromMemo || null;
   state.category = d.category || "diary";
   $("w-title").value = d.title || "";
   $("w-body").value = d.body || "";
@@ -175,9 +186,104 @@ function restoreDraft() {
 
 function showEditing() {
   const e = state.editing;
-  $("w-editing").hidden = !e;
-  $("w-date").disabled = !!e;
+  const memo = state.fromMemo;
+  $("w-editing").hidden = !e && !memo;
+  $("w-date").disabled = !!e || !!memo;
   if (e) $("w-editing").textContent = `編集中: ${e.path.replace(/^_posts\//, "")}`;
+  else if (memo) $("w-editing").textContent = `📝 ${describe(memo.path.slice(8, 18)).label}のメモから書いています。公開するとメモは消えます`;
+  $("w-memo").hidden = !!e;
+  $("w-memo").textContent = memo ? "メモに戻す" : "メモに追加";
+}
+
+// ---------------------------------------------------------------
+// メモ (下書き)。_drafts/YYYY-MM-DD.md に、その日のメモを書き溜める。
+// サイトには載らない。公開するときにまとめて本文にする。
+// ---------------------------------------------------------------
+const MEMO_RE = /<!-- memo (\S+) -->\n?/;
+
+function parseMemos(body) {
+  const parts = body.split(/^(?=<!-- memo \S+ -->)/m);
+  const memos = [];
+  for (const part of parts) {
+    const m = part.match(MEMO_RE);
+    const text = part.replace(MEMO_RE, "").trim();
+    if (text) memos.push({ at: m ? m[1] : "", text });
+  }
+  return memos;
+}
+const memoBody = (memos) => memos.map((m) => `<!-- memo ${m.at} -->\n${m.text}`).join("\n\n");
+const memoPath = (date) => `_drafts/${date}.md`;
+
+async function saveMemo() {
+  const text = $("w-body").value.trim();
+  if (!text) return status("メモが空です", "error");
+  const btn = $("w-memo");
+  btn.disabled = true;
+  status("メモを保存しています…");
+  try {
+    let path, sha, fm, memos;
+    if (state.fromMemo) {
+      // まとめかけた文章を、ひとつのメモとして下書きに戻す
+      path = state.fromMemo.path;
+      const cur = await getFile(path);
+      sha = cur?.sha;
+      fm = cur ? parseDoc(cur.text).fm : [{ key: "date", value: path.slice(8, 18) }];
+      memos = [{ at: localTimestamp(), text }];
+    } else {
+      path = memoPath(state.date);
+      const cur = await getFile(path);
+      sha = cur?.sha;
+      const doc = cur ? parseDoc(cur.text) : { fm: [{ key: "date", value: state.date }], body: "" };
+      fm = doc.fm;
+      memos = [...parseMemos(doc.body), { at: localTimestamp(), text }];
+    }
+    const tags = new Set([...(Array.isArray(fmGet(fm, "tags")) ? fmGet(fm, "tags") : []), ...state.tags]);
+    fmSet(fm, "tags", [...tags]);
+    if (state.usedMic || $("w-tidy").checked) fmSet(fm, "voice", "true");
+    await putFile(path, b64text(serialize(fm, memoBody(memos))), `memo: ${path.slice(8, 18)}`, sha);
+    const label = describe(path.slice(8, 18)).label;
+    resetForm();
+    status(`メモを保存しました（${label}のメモ ${memos.length}件）。まだ公開されていません`, "ok");
+    loadRecent();
+  } catch (e) {
+    status(e.message, "error");
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function openMemo(path) {
+  if ($("w-body").value.trim() && !confirm("書きかけの内容を破棄して、このメモを開きますか？")) return;
+  status("読み込んでいます…");
+  try {
+    const f = await getFile(path);
+    if (!f) throw new Error("見つかりませんでした");
+    const { fm, body } = parseDoc(f.text);
+    resetForm();
+    state.fromMemo = { path, sha: f.sha };
+    state.date = path.slice(8, 18);
+    const tags = fmGet(fm, "tags");
+    state.tags = new Set(Array.isArray(tags) ? tags : []);
+    $("w-body").value = parseMemos(body).map((m) => m.text).join("\n\n");
+    $("w-tidy").checked = fmGet(fm, "voice") === "true";
+    showEditing();
+    auLabel();
+    renderTags();
+    saveDraft();
+    status("メモを並べました。整えて「保存する」で公開します");
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  } catch (e) {
+    status(e.message, "error");
+  }
+}
+
+// 公開したら、元になったメモを消す。読み込んだ後に別の端末でメモが足されていたら残す。
+async function clearMemo(memo) {
+  const cur = await getFile(memo.path);
+  if (!cur) return "";
+  if (cur.sha !== memo.sha) return "（読み込んだ後に追加されたメモがあるため、メモは残しました）";
+  await deleteFile(memo.path, cur.sha, `memo: ${memo.path.slice(8, 18)} を公開`);
+  return "";
 }
 
 // ---------------------------------------------------------------
@@ -266,6 +372,11 @@ async function save() {
       status(isPrivate ? "保存しました（非公開）" : "保存しました。1〜2分でサイトに反映されます", "ok");
     }
 
+    if (state.fromMemo) {
+      const note = await clearMemo(state.fromMemo).catch(() => "（メモを消せなかったので、残っています）");
+      if (note) status(`${$("w-status").textContent}${note}`, "ok");
+    }
+
     for (const t of state.tags) state.knownTags.add(t);
     store.set(K.tags, JSON.stringify([...state.knownTags]));
     resetForm();
@@ -287,10 +398,18 @@ async function loadRecent() {
     return;
   }
   try {
-    const [posts, inbox] = await Promise.all([listPaths("_posts/"), listPaths("_inbox/")]);
+    const [posts, inbox, drafts] = await Promise.all([listPaths("_posts/"), listPaths("_inbox/"), listPaths("_drafts/")]);
+    const memos = drafts.filter((p) => /^_drafts\/\d{4}-\d{2}-\d{2}\.md$/.test(p)).sort().reverse();
     const items = posts.filter((p) => /\/\d{4}-\d{2}-\d{2}[-.].+\.md$/.test(p)).sort().reverse().slice(0, 14);
     const pending = inbox.filter((p) => p.endsWith(".md"));
     ul.innerHTML =
+      memos
+        .map((p) => {
+          const d = describe(p.slice(8, 18));
+          return `<li><button type="button" class="w-recent-item w-memo-item" data-memo="${esc(p)}">
+            <span class="au">📝 ${d.label}のメモ</span><span class="date">${d.y}.${d.m}.${d.d} ${d.weekday}</span></button></li>`;
+        })
+        .join("") +
       pending.map((p) => `<li class="w-muted">⏳ 整形待ち: ${esc(p.slice(7, 17))}</li>`).join("") +
       items
         .map((p) => {
@@ -531,6 +650,7 @@ $("w-private").addEventListener("change", saveDraft);
 $("w-tidy").addEventListener("change", saveDraft);
 $("w-photo").addEventListener("change", (ev) => { const files = [...ev.target.files]; ev.target.value = ""; if (files.length) addPhotos(files); });
 $("w-save").addEventListener("click", save);
+$("w-memo").addEventListener("click", saveMemo);
 $("w-new").addEventListener("click", () => {
   if ($("w-body").value.trim() && !confirm("書きかけの内容を破棄しますか？")) return;
   resetForm();
@@ -538,7 +658,9 @@ $("w-new").addEventListener("click", () => {
 });
 $("w-recent-list").addEventListener("click", (ev) => {
   const b = ev.target.closest(".w-recent-item");
-  if (b) openForEdit(b.dataset.path);
+  if (!b) return;
+  if (b.dataset.memo) openMemo(b.dataset.memo);
+  else openForEdit(b.dataset.path);
 });
 
 restoreDraft();
