@@ -1,0 +1,75 @@
+---
+layout: base.njk
+pageTitle: 書く
+bodyClass: writer
+noindex: true
+permalink: /write/
+---
+<link rel="manifest" href="/write/manifest.webmanifest">
+<link rel="stylesheet" href="/assets/css/write.css">
+
+<section class="w-head">
+  <label class="w-date">
+    <span class="w-au" id="w-au">8月 日</span>
+    <input type="date" id="w-date" aria-label="日付">
+  </label>
+  <button type="button" class="w-icon" id="w-open-settings" aria-label="設定">⚙</button>
+</section>
+<p class="w-editing" id="w-editing" hidden></p>
+
+<div class="w-tags" id="w-tags" role="group" aria-label="タグ"></div>
+<div class="w-tag-add">
+  <input type="text" id="w-tag-input" placeholder="タグを追加（例: JP）" enterkeyhint="done">
+</div>
+
+<div class="w-editor">
+  <textarea id="w-body" placeholder="今日のこと。&#10;&#10;キーボードのマイクや、下の「話して書く」で音声入力もできます。" rows="12"></textarea>
+  <p class="w-interim" id="w-interim" aria-live="polite"></p>
+</div>
+
+<div class="w-tools">
+  <button type="button" class="w-btn" id="w-mic" hidden>🎙 話して書く</button>
+  <label class="w-btn">📷 写真<input type="file" id="w-photo" accept="image/*" multiple hidden></label>
+</div>
+
+<div class="w-options">
+  <label><input type="checkbox" id="w-tidy"> 音声入力を整える <small>句読点・言い淀み（AI）</small></label>
+  <label><input type="checkbox" id="w-private"> 非公開にする</label>
+</div>
+
+<button type="button" class="w-save" id="w-save">保存する</button>
+<p class="w-status" id="w-status" aria-live="polite"></p>
+
+<section class="w-recent">
+  <h2>最近の日記 <button type="button" class="w-link" id="w-new">新しく書く</button></h2>
+  <ul id="w-recent-list"><li class="w-muted">読み込み中…</li></ul>
+</section>
+
+<dialog id="w-settings">
+  <form method="dialog" class="w-settings-form">
+    <h2>投稿の設定</h2>
+    <p class="w-muted">この端末だけに保存されます。iPad など他の端末でも、それぞれ一度設定してください。</p>
+    <label>GitHub トークン
+      <input type="password" id="s-token" autocomplete="off" placeholder="github_pat_…">
+    </label>
+    <details>
+      <summary>保存先・日付の区切り</summary>
+      <label>リポジトリ <input type="text" id="s-repo" placeholder="natsufuna/natsufuna.github.io"></label>
+      <label>ブランチ <input type="text" id="s-branch" placeholder="master"></label>
+      <label>この時刻より前に書いたら前日の日記にする
+        <select id="s-cutoff">
+          <option value="0">0時（区切らない）</option><option value="2">2時</option><option value="3">3時</option>
+          <option value="4">4時</option><option value="5">5時</option><option value="6">6時</option>
+        </select>
+      </label>
+    </details>
+    <p class="w-status" id="s-status"></p>
+    <div class="w-settings-actions">
+      <button type="button" class="w-link" id="s-forget">この端末から消去</button>
+      <button type="button" class="w-btn" id="s-test">接続を確認</button>
+      <button value="close" class="w-save">閉じる</button>
+    </div>
+  </form>
+</dialog>
+
+<script type="module" src="/assets/js/write.js"></script>

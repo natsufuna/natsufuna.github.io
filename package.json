@@ -1,0 +1,16 @@
+{
+  "name": "natsufuna-diary",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "eleventy",
+    "serve": "eleventy --serve",
+    "tidy": "node scripts/tidy.mjs"
+  },
+  "devDependencies": {
+    "@11ty/eleventy": "^3.1.2"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.136.0"
+  }
+}
