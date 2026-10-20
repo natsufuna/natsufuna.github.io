@@ -669,4 +669,4 @@ setupSettings();
 loadKnownTags();
 loadRecent();
 
-if ("serviceWorker" in navigator) navigator.serviceWorker.register("/write/sw.js", { scope: "/write/" }).catch(() => {});
+if ("serviceWorker" in navigator) navigator.serviceWorker.register("/write/sw.js", { scope: "/write/", updateViaCache: "none" }).catch(() => {});
