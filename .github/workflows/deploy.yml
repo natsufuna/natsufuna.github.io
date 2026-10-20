@@ -3,9 +3,9 @@ name: 日記を公開
 on:
   push:
     branches: [master]
-  # 利用制限などで整形できずに残った下書きを、3時間ごとに整形し直す
+  # 利用制限などで整形できずに残った下書きを、1日1回 (日本時間 6:17) 整形し直す
   schedule:
-    - cron: "17 */3 * * *"
+    - cron: "17 21 * * *"
   workflow_dispatch:
 
 permissions:
