@@ -254,11 +254,12 @@ async function save() {
         { key: "target", value: path },
         { key: "mode", value: mode },
         { key: "provider", value: cfg().provider },
+        { key: "queued", value: localTimestamp() },
         ...fm.map((e) => ({ key: `fm_${e.key}`, value: e.value })),
       ];
       const stamp = localTimestamp().slice(11, 19).replace(/:/g, "");
       await putFile(`_inbox/${state.date}-${stamp}.md`, b64text(serialize(inbox, body)), `inbox: ${label} (${state.date})`);
-      status(`受け付けました。整えてから公開します（数分かかります）`, "ok");
+      status("受け付けました。整えてから公開します（数分かかります。AI の利用制限中は、解除されてから公開されます）", "ok");
     } else {
       await putFile(path, b64text(serialize(fm, text)), `diary: ${label} (${state.date})`, sha);
       const isPrivate = $("w-private").checked;
