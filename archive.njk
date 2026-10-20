@@ -5,16 +5,25 @@ permalink: /archive/
 ---
 <h1 class="page-title">一覧</h1>
 {% for group in collections.entries | bySummer %}
+{% set summerLoop = loop %}
 <section class="archive-group">
   <h2>{{ group.summer | summerLabel }} <small>{{ group.items.length }}件</small></h2>
-  <ul class="archive-list">
-    {% for post in group.items %}
-    <li>
-      <a href="{{ post.url }}">{% if post.data.category != "diary" %}<small class="kind">{{ site.categories[post.data.category] }}</small>{% endif %}<span class="au">{{ post.data.heading }}</span></a>
-      <span class="date">{% if post.data.category != "diary" %}{{ post.data.diary.label }} · {% endif %}{{ post.data.diary.y }}.{{ post.data.diary.m }}.{{ post.data.diary.d }}</span>
-      {% for t in post.data.tags | displayTags %}<a class="tag" href="/?tag={{ t | urlencode }}">{{ t }}</a>{% endfor %}
-    </li>
-    {% endfor %}
-  </ul>
+  {% for month in group.items | byMonth %}
+  <details class="archive-month"{% if summerLoop.first and loop.first %} open{% endif %}>
+    <summary>
+      <span class="month">{{ month.y }}年{{ month.m }}月</span>
+      <span class="count">{{ month.items.length }}件</span>
+    </summary>
+    <ul class="archive-list">
+      {% for post in month.items %}
+      <li>
+        <a href="{{ post.url }}">{% if post.data.category != "diary" %}<small class="kind">{{ site.categories[post.data.category] }}</small>{% endif %}<span class="au">{{ post.data.heading }}</span></a>
+        <span class="date">{% if post.data.category != "diary" %}{{ post.data.diary.label }} · {% endif %}{{ post.data.diary.m }}/{{ post.data.diary.d }} {{ post.data.diary.weekday }}</span>
+        {% for t in post.data.tags | displayTags %}<a class="tag" href="/?tag={{ t | urlencode }}">{{ t }}</a>{% endfor %}
+      </li>
+      {% endfor %}
+    </ul>
+  </details>
+  {% endfor %}
 </section>
 {% endfor %}

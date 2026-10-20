@@ -3,7 +3,9 @@
 // 認証情報はリポジトリの Secret から読む:
 //   Claude:  CLAUDE_CODE_OAUTH_TOKEN (Pro/Max のサブスクリプション) か ANTHROPIC_API_KEY (API)
 //   ChatGPT: OPENAI_API_KEY (OpenAI API)
-// 整形に失敗しても日記は失わないよう、そのときは元の文章のまま公開する。
+// AI の呼び出しに失敗したとき (サブスクリプションの利用制限など) は公開せず、
+// _inbox に残して次の実行 (定期実行か次の投稿) で整形し直す。
+// ただし MAX_WAIT_DAYS 日たっても整形できないものは、元の文章のまま公開する。
 import fs from "node:fs/promises";
 import os from "node:os";
 import path from "node:path";
@@ -16,6 +18,7 @@ const INBOX = "_inbox";
 const POSTS = "_posts";
 const CLAUDE_MODEL = "claude-opus-5-5";
 const OPENAI_MODEL = process.env.OPENAI_MODEL || "gpt-5.5";
+const MAX_WAIT_DAYS = 8;
 const TARGET_RE = /^_posts\/\d{4}-\d{2}-\d{2}[-.][\w.-]+\.md$/;
 
 const SYSTEM = `あなたは natsufuna さんの日記の編集を手伝います。
@@ -131,6 +134,7 @@ function backendFor(provider) {
   return null;
 }
 
+// 整形した本文を返す。あとで整形し直すべきときは null を返す。
 async function tidy(provider, examples, raw) {
   const backend = backendFor(provider);
   if (!backend) {
@@ -138,24 +142,37 @@ async function tidy(provider, examples, raw) {
     return raw;
   }
   const { masked, images } = maskImages(raw);
+  let text;
   try {
-    const text = await backend.call(
+    text = await backend.call(
       `${SYSTEM}\n\n以下は過去の日記です（文体の手本）:\n\n${examples}`,
       `<transcript>\n${masked}\n</transcript>`,
     );
-    const m = text.match(/<diary>([\s\S]*?)<\/diary>/);
-    const cleaned = (m ? m[1] : text).trim();
-    // 言い淀みを除く以上に短くなっていたら、何か削りすぎている
-    if (cleaned.length < masked.replace(/\s/g, "").length * 0.5) {
-      console.warn("整形後の文章が短くなりすぎたため、元の文章のまま公開します");
-      return raw;
-    }
-    console.log(`整形: ${backend.name}`);
-    return unmaskImages(cleaned, images);
   } catch (e) {
-    console.warn(`整形に失敗しました [${backend.name}] (${e?.status ?? ""} ${e?.message ?? e})。元の文章のまま公開します`);
+    console.warn(`整形できませんでした [${backend.name}] (${e?.status ?? ""} ${String(e?.message ?? e).slice(0, 300)})`);
+    return null;
+  }
+  const m = text.match(/<diary>([\s\S]*?)<\/diary>/);
+  // 利用制限のときなど、Claude Code はエラー文を本文として返すことがある
+  if (!m) {
+    console.warn(`整形結果が返ってきませんでした [${backend.name}]: ${text.trim().slice(0, 300)}`);
+    return null;
+  }
+  const cleaned = m[1].trim();
+  // 言い淀みを除く以上に短くなっていたら、何か削りすぎている
+  if (cleaned.length < masked.replace(/\s/g, "").length * 0.5) {
+    console.warn("整形後の文章が短くなりすぎたため、元の文章のまま公開します");
     return raw;
   }
+  console.log(`整形: ${backend.name}`);
+  return unmaskImages(cleaned, images);
+}
+
+// 下書きが届いてからの日数 (queued がなければファイル名の日付で数える)
+function waitedDays(fm, file) {
+  const queued = fmGet(fm, "queued") || file.slice(0, 10);
+  const t = Date.parse(queued);
+  return Number.isNaN(t) ? 0 : (Date.now() - t) / 86400000;
 }
 
 async function exists(p) {
@@ -179,7 +196,15 @@ async function main() {
     }
     const postFm = fm.filter((e) => e.key.startsWith("fm_")).map((e) => ({ key: e.key.slice(3), value: e.value }));
     const provider = fmGet(fm, "provider") || process.env.TIDY_PROVIDER || "claude";
-    const cleaned = await tidy(provider, examples, body.trim());
+    let cleaned = await tidy(provider, examples, body.trim());
+    if (cleaned === null) {
+      if (waitedDays(fm, f) < MAX_WAIT_DAYS) {
+        console.log(`${f}: 公開せずに残し、あとで整形し直します`);
+        continue;
+      }
+      console.warn(`${f}: ${MAX_WAIT_DAYS}日たっても整形できないため、元の文章のまま公開します`);
+      cleaned = body.trim();
+    }
 
     let out;
     if (mode === "replace" || !(await exists(target))) {

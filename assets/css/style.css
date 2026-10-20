@@ -325,10 +325,36 @@ img { max-width: 100%; height: auto; }
 
 .page { max-width: var(--measure); margin: 0 auto; padding-top: 24px; }
 .page h1, .page-title { font-weight: 300; font-size: 1.8rem; letter-spacing: 0.06em; }
+.site-main > .page-title { max-width: var(--measure); margin: 24px auto 28px; }
 .archive-group { max-width: var(--measure); margin: 0 auto 36px; }
 .archive-group h2 { font-weight: 300; font-size: 1.2rem; border-bottom: 1px solid var(--rule); padding-bottom: 4px; }
 .archive-group h2 small { font-size: 0.75rem; color: var(--ink-faint); margin-left: 8px; }
-.archive-list { list-style: none; padding: 0; margin: 0; columns: 2 14rem; column-gap: 28px; }
+.archive-month { border-bottom: 1px solid var(--rule); }
+.archive-month summary {
+  display: flex;
+  align-items: baseline;
+  gap: 12px;
+  padding: 12px 4px;
+  cursor: pointer;
+  list-style: none;
+}
+.archive-month summary::-webkit-details-marker { display: none; }
+.archive-month summary::before {
+  content: "";
+  width: 6px;
+  height: 6px;
+  border-right: 1px solid var(--ink-faint);
+  border-bottom: 1px solid var(--ink-faint);
+  transform: rotate(-45deg);
+  transition: transform 0.15s ease;
+  align-self: center;
+}
+.archive-month[open] summary::before { transform: rotate(45deg); }
+.archive-month summary:hover .month { color: var(--accent); }
+.archive-month .month { font-size: 1.05rem; letter-spacing: 0.04em; }
+.archive-month .count { font-size: 0.75rem; color: var(--ink-faint); }
+.archive-month .archive-list { padding: 0 4px 14px 22px; }
+.archive-list { list-style: none; padding: 0; margin: 0; }
 .archive-list li { break-inside: avoid; display: flex; align-items: baseline; gap: 10px; padding: 3px 0; flex-wrap: wrap; }
 .archive-list .kind { color: var(--accent); font-size: 0.72rem; margin-right: 6px; letter-spacing: 0.1em; }
 .archive-list .date { color: var(--ink-faint); font-size: 0.78rem; }
