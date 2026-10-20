@@ -1,0 +1,31 @@
+---
+layout: base.njk
+---
+{%- set prev = collections.entries | getPreviousCollectionItem(page) -%}
+{%- set next = collections.entries | getNextCollectionItem(page) -%}
+{%- set shownTags = tags | displayTags -%}
+{%- set isDiary = category == "diary" -%}
+<article class="entry entry-{{ category }}">
+  <header class="entry-header">
+    {% if isDiary %}
+    <h1 class="entry-title"><span class="au-unit">8月</span>{{ diary.day }}<span class="au-unit">日</span></h1>
+    {% else %}
+    <p class="entry-kind">{{ site.categories[category] or category }}</p>
+    <h1 class="entry-title entry-title-text">{{ heading }}</h1>
+    {% endif %}
+    <p class="entry-meta">
+      <time datetime="{{ diary.iso }}">{{ diary.y }}年{{ diary.m }}月{{ diary.d }}日（{{ diary.weekday }}）</time>
+      {% if not isDiary %}<span class="entry-au">{{ diary.label }}</span>{% endif %}
+      {% for t in shownTags %}<a class="tag" href="/?tag={{ t | urlencode }}">{{ t }}</a>{% endfor %}
+    </p>
+  </header>
+  <div class="entry-body">
+{{ content | safe }}
+  </div>
+</article>
+
+<nav class="entry-nav">
+  {% if prev %}<a class="prev" href="{{ prev.url }}"><small>前へ</small>{{ prev.data.heading }}</a>{% else %}<span></span>{% endif %}
+  <a class="to-calendar" href="/?month={{ diary.y }}-{{ diary.m }}">カレンダー</a>
+  {% if next %}<a class="next" href="{{ next.url }}"><small>次へ</small>{{ next.data.heading }}</a>{% else %}<span></span>{% endif %}
+</nav>

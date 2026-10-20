@@ -1,0 +1,20 @@
+---
+layout: base.njk
+pageTitle: 一覧
+permalink: /archive/
+---
+<h1 class="page-title">一覧</h1>
+{% for group in collections.entries | bySummer %}
+<section class="archive-group">
+  <h2>{{ group.summer | summerLabel }} <small>{{ group.items.length }}件</small></h2>
+  <ul class="archive-list">
+    {% for post in group.items %}
+    <li>
+      <a href="{{ post.url }}">{% if post.data.category != "diary" %}<small class="kind">{{ site.categories[post.data.category] }}</small>{% endif %}<span class="au">{{ post.data.heading }}</span></a>
+      <span class="date">{% if post.data.category != "diary" %}{{ post.data.diary.label }} · {% endif %}{{ post.data.diary.y }}.{{ post.data.diary.m }}.{{ post.data.diary.d }}</span>
+      {% for t in post.data.tags | displayTags %}<a class="tag" href="/?tag={{ t | urlencode }}">{{ t }}</a>{% endfor %}
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endfor %}

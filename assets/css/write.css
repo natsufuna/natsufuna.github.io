@@ -1,0 +1,170 @@
+/* 投稿ページ。片手で書けるように、大きめの押しやすい部品で。 */
+
+.writer .site-main { max-width: 40rem; }
+.writer .site-nav a[href="/write/"] { display: none; }
+
+.w-head { display: flex; align-items: center; gap: 10px; padding: 10px 0 4px; }
+.w-date { flex: 1; display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; }
+.w-au { font-size: 2.2rem; font-weight: 300; line-height: 1.2; letter-spacing: 0.04em; }
+.w-date input {
+  font: inherit;
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+  background: transparent;
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 4px 8px;
+}
+.w-date input:disabled { opacity: 0.6; }
+.w-icon {
+  font-size: 1.3rem;
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  border: 1px solid var(--rule);
+  background: var(--card);
+  color: var(--ink-soft);
+  cursor: pointer;
+}
+.w-editing { font-size: 0.8rem; color: var(--accent); margin: 0 0 6px; }
+
+.w-kind { display: flex; gap: 18px; margin: 10px 0 4px; font-size: 0.95rem; }
+.w-kind label { display: flex; align-items: center; gap: 6px; }
+.w-kind input { width: 18px; height: 18px; accent-color: var(--accent); }
+.w-title {
+  width: 100%;
+  font: inherit;
+  font-size: 1.1rem;
+  color: var(--ink);
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: 10px;
+  padding: 10px 12px;
+  margin: 8px 0 0;
+}
+.w-tags { display: flex; flex-wrap: wrap; gap: 8px; margin: 12px 0 8px; }
+.w-tags .chip { font-size: 0.85rem; padding: 4px 14px; }
+.w-tag-add input {
+  font: inherit;
+  font-size: 0.85rem;
+  width: 100%;
+  color: var(--ink);
+  background: transparent;
+  border: none;
+  border-bottom: 1px dashed var(--rule);
+  padding: 6px 2px;
+}
+.w-tag-add input:focus { outline: none; border-bottom-color: var(--accent); }
+
+.w-editor { margin-top: 14px; }
+.w-editor textarea {
+  width: 100%;
+  min-height: 34vh;
+  font-family: var(--sans);
+  font-size: 16px; /* iOS で拡大されないように 16px 以上 */
+  line-height: 1.95;
+  color: var(--ink);
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: 14px;
+  padding: 16px;
+  resize: vertical;
+}
+.w-editor textarea:focus { outline: 2px solid var(--accent-soft); border-color: var(--accent); }
+.w-interim { min-height: 1.4em; margin: 4px 4px 0; color: var(--ink-faint); font-size: 0.9rem; }
+
+.w-tools { display: flex; gap: 10px; flex-wrap: wrap; margin: 6px 0 12px; }
+.w-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font: inherit;
+  font-size: 0.95rem;
+  color: var(--ink);
+  background: var(--card);
+  border: 1px solid var(--rule);
+  border-radius: 999px;
+  padding: 10px 18px;
+  min-height: 44px;
+  cursor: pointer;
+}
+.w-btn.on { background: #b8615a; border-color: #b8615a; color: #fff; animation: w-pulse 1.6s ease-in-out infinite; }
+@keyframes w-pulse { 50% { opacity: 0.75; } }
+
+.w-options { display: grid; gap: 10px; margin: 8px 0 18px; font-size: 0.95rem; }
+.w-options label { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.w-options input { width: 20px; height: 20px; accent-color: var(--accent); }
+.w-options small { color: var(--ink-faint); font-size: 0.75rem; }
+
+.w-save {
+  font: inherit;
+  font-size: 1.05rem;
+  letter-spacing: 0.2em;
+  width: 100%;
+  min-height: 52px;
+  border: none;
+  border-radius: 14px;
+  background: var(--accent);
+  color: var(--card);
+  cursor: pointer;
+}
+.w-save:disabled { opacity: 0.5; }
+.w-status { min-height: 1.6em; margin: 10px 2px; font-size: 0.9rem; color: var(--ink-soft); }
+.w-status[data-kind="error"] { color: #b8615a; }
+.w-status[data-kind="ok"] { color: var(--accent); }
+
+.w-recent { margin-top: 36px; }
+.w-recent h2 {
+  font-weight: 400;
+  font-size: 1.1rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 6px;
+}
+.w-recent ul { list-style: none; padding: 0; margin: 0; }
+.w-recent li { border-bottom: 1px solid var(--rule); }
+.w-recent li.w-muted { padding: 10px 2px; }
+.w-recent-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  width: 100%;
+  font: inherit;
+  color: var(--ink);
+  background: none;
+  border: none;
+  padding: 12px 2px;
+  cursor: pointer;
+  text-align: left;
+}
+.w-recent-item .au { font-size: 1.05rem; }
+.w-recent-item .date { color: var(--ink-faint); font-size: 0.8rem; }
+.w-link { font: inherit; font-size: 0.85rem; color: var(--accent); background: none; border: none; cursor: pointer; padding: 4px; }
+.w-muted { color: var(--ink-faint); font-size: 0.85rem; }
+
+dialog#w-settings {
+  border: 1px solid var(--rule);
+  border-radius: 16px;
+  background: var(--card);
+  color: var(--ink);
+  width: min(30rem, calc(100vw - 32px));
+  padding: 20px;
+}
+dialog#w-settings::backdrop { background: rgb(0 0 0 / 0.3); }
+.w-settings-form h2 { font-weight: 400; margin: 0 0 6px; }
+.w-settings-form label { display: grid; gap: 4px; font-size: 0.9rem; margin: 12px 0; }
+.w-settings-form input, .w-settings-form select {
+  font: inherit;
+  font-size: 16px;
+  color: var(--ink);
+  background: var(--paper);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  padding: 8px 10px;
+}
+.w-settings-form details { margin: 8px 0; font-size: 0.9rem; }
+.w-settings-actions { display: flex; gap: 8px; align-items: center; justify-content: flex-end; flex-wrap: wrap; margin-top: 12px; }
+.w-settings-actions .w-save { width: auto; padding: 0 24px; min-height: 44px; letter-spacing: 0.05em; }
+.w-settings-actions .w-link { margin-right: auto; }

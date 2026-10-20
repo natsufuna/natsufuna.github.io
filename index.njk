@@ -1,0 +1,62 @@
+---
+layout: base.njk
+bodyClass: home
+---
+<div class="home-grid">
+  <aside class="home-side">
+    <section class="calendar" id="calendar" aria-label="カレンダー">
+      <div class="cal-head">
+        <button type="button" class="cal-nav" data-step="-1" aria-label="前の月">‹</button>
+        <select id="cal-month" aria-label="月を選ぶ"></select>
+        <button type="button" class="cal-nav" data-step="1" aria-label="次の月">›</button>
+      </div>
+      <table class="cal-grid">
+        <thead><tr><th>日</th><th>月</th><th>火</th><th>水</th><th>木</th><th>金</th><th>土</th></tr></thead>
+        <tbody id="cal-body"></tbody>
+      </table>
+      <p class="cal-legend"><span class="dot"></span>記事のある日 · 小さな数字は8月暦</p>
+    </section>
+
+    <section class="filters" aria-label="絞り込み">
+      <div class="kind-filter" id="kinds" role="group" aria-label="種類">
+        <button type="button" class="chip" data-kind="" aria-pressed="true">すべて</button>
+        {% for key, label in site.categories %}<button type="button" class="chip" data-kind="{{ key }}" aria-pressed="false">{{ label }}</button>{% endfor %}
+      </div>
+      <label class="field">
+        <span>さがす</span>
+        <input type="search" id="q" placeholder="ことば" autocomplete="off">
+      </label>
+      <label class="field">
+        <span>夏</span>
+        <select id="summer"><option value="">すべての夏</option></select>
+      </label>
+      <label class="field">
+        <span>並び</span>
+        <select id="sort">
+          <option value="desc">新しい順</option>
+          <option value="asc">古い順</option>
+        </select>
+      </label>
+      <div class="tag-filter" id="tags" role="group" aria-label="タグ"></div>
+    </section>
+  </aside>
+
+  <section class="home-list">
+    <p class="list-status" id="status"></p>
+    <ol class="entry-list" id="list">
+      {# JavaScript が使えない環境向けに、最新の記事を並べておく #}
+      {% for post in collections.entries | reverse %}{% if loop.index <= 20 %}
+      <li class="entry-card">
+        <a href="{{ post.url }}">
+          <span class="card-au">{{ post.data.heading }}</span>
+          <span class="card-date">{{ post.data.diary.y }}.{{ post.data.diary.m }}.{{ post.data.diary.d }} {{ post.data.diary.weekday }}</span>
+          <span class="card-excerpt">{{ post.content | excerpt }}</span>
+        </a>
+      </li>
+      {% endif %}{% endfor %}
+    </ol>
+    <button type="button" class="more" id="more" hidden>もっと見る</button>
+  </section>
+</div>
+
+<script type="module" src="/assets/js/home.js"></script>
