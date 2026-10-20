@@ -3,16 +3,21 @@ layout: base.njk
 ---
 {%- set prev = collections.entries | getPreviousCollectionItem(page) -%}
 {%- set next = collections.entries | getNextCollectionItem(page) -%}
-{%- set tags = tags | displayTags -%}
-<article class="entry">
+{%- set shownTags = tags | displayTags -%}
+{%- set isDiary = category == "diary" -%}
+<article class="entry entry-{{ category }}">
   <header class="entry-header">
-    <h1 class="entry-title"><span class="au-prefix">8月</span>{{ diary.day }}<span class="au-suffix">日</span></h1>
+    {% if isDiary %}
+    <h1 class="entry-title"><span class="au-unit">8月</span>{{ diary.day }}<span class="au-unit">日</span></h1>
+    {% else %}
+    <p class="entry-kind">{{ site.categories[category] or category }}</p>
+    <h1 class="entry-title entry-title-text">{{ heading }}</h1>
+    {% endif %}
     <p class="entry-meta">
       <time datetime="{{ diary.iso }}">{{ diary.y }}年{{ diary.m }}月{{ diary.d }}日（{{ diary.weekday }}）</time>
-      <span class="entry-summer">{{ diary.summer | summerLabel }}</span>
-      {% for t in tags %}<a class="tag" href="/?tag={{ t | urlencode }}">{{ t }}</a>{% endfor %}
+      {% if not isDiary %}<span class="entry-au">{{ diary.label }}</span>{% endif %}
+      {% for t in shownTags %}<a class="tag" href="/?tag={{ t | urlencode }}">{{ t }}</a>{% endfor %}
     </p>
-    {% if title and not (title | string).startsWith("8月") %}<p class="entry-subtitle">{{ title }}</p>{% endif %}
   </header>
   <div class="entry-body">
 {{ content | safe }}
@@ -20,7 +25,7 @@ layout: base.njk
 </article>
 
 <nav class="entry-nav">
-  {% if prev %}<a class="prev" href="{{ prev.url }}"><small>前の日</small>{{ prev.data.diary.label }}</a>{% else %}<span></span>{% endif %}
+  {% if prev %}<a class="prev" href="{{ prev.url }}"><small>前へ</small>{{ prev.data.heading }}</a>{% else %}<span></span>{% endif %}
   <a class="to-calendar" href="/?month={{ diary.y }}-{{ diary.m }}">カレンダー</a>
-  {% if next %}<a class="next" href="{{ next.url }}"><small>次の日</small>{{ next.data.diary.label }}</a>{% else %}<span></span>{% endif %}
+  {% if next %}<a class="next" href="{{ next.url }}"><small>次へ</small>{{ next.data.heading }}</a>{% else %}<span></span>{% endif %}
 </nav>

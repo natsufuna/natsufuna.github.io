@@ -1,6 +1,7 @@
 import { august, describe, isoOf, summerLabel } from "./august.js";
 
 const PAGE = 20;
+const KINDS = Object.fromEntries([...document.querySelectorAll("#kinds .chip[data-kind]")].map((b) => [b.dataset.kind, b.textContent]));
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
 
@@ -10,18 +11,13 @@ const state = {
   summer: params.get("summer") || "",
   sort: params.get("sort") || "desc",
   tag: params.get("tag") || "",
+  kind: params.get("kind") || "",
   day: params.get("day") || "",
   shown: PAGE,
 };
 
-// ---------- 今日 ----------
 const now = new Date();
 const todayIso = isoOf(now.getFullYear(), now.getMonth() + 1, now.getDate());
-{
-  const t = describe(todayIso);
-  $("today-au").textContent = t.label;
-  $("today-date").textContent = `${t.y}年${t.m}月${t.d}日（${t.weekday}）· ${summerLabel(t.summer)}`;
-}
 
 const res = await fetch("/posts.json");
 const entries = await res.json();
@@ -78,7 +74,7 @@ function renderCalendar() {
       const has = byDate.get(iso);
       const cls = ["cal-cell", has && "has", iso === todayIso && "today", iso === state.day && "selected"].filter(Boolean).join(" ");
       const au = august(calY, calM, d).day;
-      const label = `${calM}月${d}日（8月${au}日）${has ? "・日記あり" : ""}`;
+      const label = `${calM}月${d}日（8月${au}日）${has ? "・記事あり" : ""}`;
       const inner = `<span class="cal-day">${d}</span><span class="cal-au">${au}</span>`;
       html += has
         ? `<td><button type="button" class="${cls}" data-date="${iso}" aria-label="${label}">${inner}</button></td>`
@@ -141,10 +137,17 @@ $("tags").addEventListener("click", (ev) => {
   state.shown = PAGE;
   update();
 });
+$("kinds").addEventListener("click", (ev) => {
+  const b = ev.target.closest(".chip");
+  if (!b) return;
+  state.kind = b.dataset.kind;
+  state.shown = PAGE;
+  update();
+});
 $("more").addEventListener("click", () => { state.shown += PAGE; renderList(); });
 $("status").addEventListener("click", (ev) => {
   if (ev.target.closest("[data-clear]")) {
-    Object.assign(state, { q: "", summer: "", tag: "", day: "", shown: PAGE });
+    Object.assign(state, { q: "", summer: "", tag: "", kind: "", day: "", shown: PAGE });
     $("q").value = "";
     $("summer").value = "";
     update();
@@ -157,8 +160,9 @@ function filtered() {
     (e) =>
       (!state.summer || String(e.summer) === state.summer) &&
       (!state.tag || e.tags.includes(state.tag)) &&
+      (!state.kind || e.kind === state.kind) &&
       (!state.day || e.date === state.day) &&
-      (!q || e.text.toLowerCase().includes(q) || e.title.toLowerCase().includes(q)),
+      (!q || e.text.toLowerCase().includes(q) || e.heading.toLowerCase().includes(q)),
   );
   return state.sort === "asc" ? out : out.reverse();
 }
@@ -187,9 +191,8 @@ function renderList() {
     .map((e) => {
       const [y, m, d] = e.date.split("-").map(Number);
       return `<li class="entry-card"><a href="${e.url}">
-        <span class="card-au">8月${e.au}日</span>
-        <span class="card-date">${y}.${m}.${d} ${e.wd}</span>
-        ${e.title ? `<span class="card-title">${esc(e.title)}</span>` : ""}
+        <span class="card-au">${e.kind !== "diary" ? `<small class="card-kind">${esc(KINDS[e.kind] || e.kind)}</small>` : ""}${esc(e.heading)}</span>
+        <span class="card-date">${e.kind !== "diary" ? `8月${e.au}日 · ` : ""}${y}.${m}.${d} ${e.wd}</span>
         <span class="card-excerpt">${snippet(e)}</span>
         ${e.tags.length ? `<span class="card-tags">${e.tags.map((t) => `<span class="tag">${esc(t)}</span>`).join("")}</span>` : ""}
       </a></li>`;
@@ -200,22 +203,24 @@ function renderList() {
   const conds = [];
   if (state.day) { const t = describe(state.day); conds.push(`${t.m}月${t.d}日`); }
   if (state.summer) conds.push(summerLabel(Number(state.summer)));
+  if (state.kind) conds.push(KINDS[state.kind] || state.kind);
   if (state.tag) conds.push(state.tag);
   if (state.q) conds.push(`「${state.q}」`);
   $("status").innerHTML = conds.length
-    ? `${conds.map(esc).join(" · ")} — ${list.length}日 <button type="button" data-clear>解除</button>`
-    : `${entries.length}日分の日記`;
+    ? `${conds.map(esc).join(" · ")} — ${list.length}件 <button type="button" data-clear>解除</button>`
+    : `${entries.length}件の記事`;
 }
 
 function syncUrl() {
   const p = new URLSearchParams();
-  for (const k of ["q", "summer", "tag", "day"]) if (state[k]) p.set(k, state[k]);
+  for (const k of ["q", "kind", "summer", "tag", "day"]) if (state[k]) p.set(k, state[k]);
   if (state.sort !== "desc") p.set("sort", state.sort);
   history.replaceState(null, "", p.toString() ? `?${p}` : location.pathname);
 }
 
 function update() {
   for (const b of $("tags").querySelectorAll(".chip")) b.setAttribute("aria-pressed", String(b.dataset.tag === state.tag));
+  for (const b of $("kinds").querySelectorAll(".chip")) b.setAttribute("aria-pressed", String(b.dataset.kind === state.kind));
   renderCalendar();
   renderList();
   syncUrl();

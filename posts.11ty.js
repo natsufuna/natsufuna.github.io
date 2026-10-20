@@ -24,7 +24,8 @@ export function render({ collections }) {
       au: d.day,
       summer: d.summer,
       tags: displayTags(p.data.tags),
-      title: p.data.title && !String(p.data.title).startsWith("8月") ? String(p.data.title) : "",
+      kind: p.data.category,
+      heading: p.data.heading,
       excerpt: text.length > 110 ? text.slice(0, 110) + "…" : text,
       text,
     };

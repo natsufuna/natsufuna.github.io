@@ -2,12 +2,6 @@
 layout: base.njk
 bodyClass: home
 ---
-<section class="today" aria-live="polite">
-  <p class="today-label">今日は</p>
-  <p class="today-au" id="today-au">8月&nbsp;日</p>
-  <p class="today-date" id="today-date"></p>
-</section>
-
 <div class="home-grid">
   <aside class="home-side">
     <section class="calendar" id="calendar" aria-label="カレンダー">
@@ -20,10 +14,14 @@ bodyClass: home
         <thead><tr><th>日</th><th>月</th><th>火</th><th>水</th><th>木</th><th>金</th><th>土</th></tr></thead>
         <tbody id="cal-body"></tbody>
       </table>
-      <p class="cal-legend"><span class="dot"></span>日記のある日 · 小さな数字は8月暦</p>
+      <p class="cal-legend"><span class="dot"></span>記事のある日 · 小さな数字は8月暦</p>
     </section>
 
     <section class="filters" aria-label="絞り込み">
+      <div class="kind-filter" id="kinds" role="group" aria-label="種類">
+        <button type="button" class="chip" data-kind="" aria-pressed="true">すべて</button>
+        {% for key, label in site.categories %}<button type="button" class="chip" data-kind="{{ key }}" aria-pressed="false">{{ label }}</button>{% endfor %}
+      </div>
       <label class="field">
         <span>さがす</span>
         <input type="search" id="q" placeholder="ことば" autocomplete="off">
@@ -46,11 +44,11 @@ bodyClass: home
   <section class="home-list">
     <p class="list-status" id="status"></p>
     <ol class="entry-list" id="list">
-      {# JavaScript が使えない環境向けに、最新の日記を並べておく #}
+      {# JavaScript が使えない環境向けに、最新の記事を並べておく #}
       {% for post in collections.entries | reverse %}{% if loop.index <= 20 %}
       <li class="entry-card">
         <a href="{{ post.url }}">
-          <span class="card-au">{{ post.data.diary.label }}</span>
+          <span class="card-au">{{ post.data.heading }}</span>
           <span class="card-date">{{ post.data.diary.y }}.{{ post.data.diary.m }}.{{ post.data.diary.d }} {{ post.data.diary.weekday }}</span>
           <span class="card-excerpt">{{ post.content | excerpt }}</span>
         </a>

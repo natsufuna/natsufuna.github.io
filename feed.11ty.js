@@ -11,7 +11,7 @@ export function render({ collections, site }) {
   return `<?xml version="1.0" encoding="utf-8"?>
 <feed xmlns="http://www.w3.org/2005/Atom">
   <title>${esc(site.title)}</title>
-  <subtitle>${esc(site.tagline)}</subtitle>
+  <subtitle>${esc(site.aboutme)}</subtitle>
   <link href="${site.url}/feed.xml" rel="self"/>
   <link href="${site.url}/"/>
   <id>${site.url}/</id>
@@ -21,7 +21,7 @@ ${items
   .map((p) => {
     const d = p.data.diary;
     return `  <entry>
-    <title>${esc(d.label)}（${d.y}.${d.m}.${d.d}）</title>
+    <title>${esc(p.data.heading)}（${d.y}.${d.m}.${d.d}）</title>
     <link href="${site.url}${p.url}"/>
     <id>${site.url}${p.url}</id>
     <updated>${d.iso}T00:00:00Z</updated>

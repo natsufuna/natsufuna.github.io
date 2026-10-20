@@ -17,6 +17,13 @@ permalink: /write/
 </section>
 <p class="w-editing" id="w-editing" hidden></p>
 
+<div class="w-kind" role="radiogroup" aria-label="種類">
+  {% for key, label in site.categories %}
+  <label><input type="radio" name="w-kind" value="{{ key }}"{% if loop.first %} checked{% endif %}> {{ label }}</label>
+  {% endfor %}
+</div>
+<input type="text" class="w-title" id="w-title" placeholder="タイトル（例: 『天気の子』感想）" hidden>
+
 <div class="w-tags" id="w-tags" role="group" aria-label="タグ"></div>
 <div class="w-tag-add">
   <input type="text" id="w-tag-input" placeholder="タグを追加（例: JP）" enterkeyhint="done">
@@ -53,9 +60,15 @@ permalink: /write/
       <input type="password" id="s-token" autocomplete="off" placeholder="github_pat_…">
     </label>
     <details>
-      <summary>保存先・日付の区切り</summary>
+      <summary>整形の AI・日付の区切り・保存先</summary>
       <label>リポジトリ <input type="text" id="s-repo" placeholder="natsufuna/natsufuna.github.io"></label>
       <label>ブランチ <input type="text" id="s-branch" placeholder="master"></label>
+      <label>音声入力の整形に使う AI
+        <select id="s-provider">
+          <option value="claude">Claude</option>
+          <option value="openai">ChatGPT（OpenAI）</option>
+        </select>
+      </label>
       <label>この時刻より前に書いたら前日の日記にする
         <select id="s-cutoff">
           <option value="0">0時（区切らない）</option><option value="2">2時</option><option value="3">3時</option>

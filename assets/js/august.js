@@ -14,11 +14,11 @@ export function august(y, m, d) {
   return { summer, day, label: `8月${day}日` };
 }
 
-// "2025-10-03" -> { y, m, d, iso, weekday, summer, day, label, season }
+// "2025-10-03" -> { y, m, d, iso, weekday, summer, day, label }
 export function describe(iso) {
   const [y, m, d] = iso.split("-").map(Number);
   const wd = new Date(Date.UTC(y, m - 1, d)).getUTCDay();
-  return { y, m, d, iso, weekday: WEEKDAYS[wd], ...august(y, m, d), season: seasonOf(m) };
+  return { y, m, d, iso, weekday: WEEKDAYS[wd], ...august(y, m, d) };
 }
 
 export function isoOf(y, m, d) {
@@ -45,13 +45,6 @@ export function localTimestamp(now = new Date()) {
   );
 }
 
-export function seasonOf(m) {
-  if (m >= 6 && m <= 9) return "summer";
-  if (m === 10 || m === 11) return "autumn";
-  if (m === 12 || m <= 2) return "winter";
-  return "spring";
-}
-
 export function summerLabel(summer) {
   return `${summer}年の夏`;
 }
@@ -60,4 +53,14 @@ export function summerLabel(summer) {
 export function displayTags(tags) {
   if (!Array.isArray(tags)) return [];
   return tags.map(String).filter((t) => t && !/^\d{4}\/\d{2}$/.test(t));
+}
+
+// 記事の URL は8月暦で表す: 8月64日 (2025年の夏) → /diary/20250864.html
+// 8月1〜9日は 2桁にそろえる (20250803)。同じ日に2本目なら 20250864-2.html。
+// ファイル名の slug が種類名そのもの ("diary" など) なら省き、それ以外は後ろにつける。
+export function postUrl(category, iso, slug) {
+  const { summer, day } = describe(iso);
+  const m = slug.match(/^(?:diary|review)(-\d+)?$/);
+  const suffix = m ? m[1] || "" : `-${slug}`;
+  return `/${category}/${summer}08${String(day).padStart(2, "0")}${suffix}.html`;
 }

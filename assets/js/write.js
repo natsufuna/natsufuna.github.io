@@ -11,6 +11,7 @@ const K = {
   cutoff: "diary.writer.cutoff",
   draft: "diary.writer.draft",
   tags: "diary.writer.tags",
+  provider: "diary.writer.provider",
 };
 const store = {
   get(k, d = "") { try { return localStorage.getItem(k) ?? d; } catch { return d; } },
@@ -25,6 +26,7 @@ const cfg = () => {
     name,
     branch: store.get(K.branch) || "master",
     cutoff: Number(store.get(K.cutoff, "4")),
+    provider: store.get(K.provider) || "claude",
   };
 };
 
@@ -93,6 +95,7 @@ async function listPaths(prefix) {
 // ---------------------------------------------------------------
 const state = {
   date: "",
+  category: "diary",
   tags: new Set(),
   knownTags: new Set(),
   editing: null, // { path, sha, fm }
@@ -103,7 +106,11 @@ function auLabel() {
   const d = describe(state.date);
   $("w-au").textContent = d.label;
   $("w-date").value = state.date;
-  document.documentElement.dataset.season = d.season;
+}
+
+function renderKind() {
+  for (const r of document.querySelectorAll('input[name="w-kind"]')) r.checked = r.value === state.category;
+  $("w-title").hidden = state.category === "diary";
 }
 
 function renderTags() {
@@ -118,6 +125,8 @@ function saveDraft() {
     K.draft,
     JSON.stringify({
       date: state.date,
+      category: state.category,
+      title: $("w-title").value,
       body: $("w-body").value,
       tags: [...state.tags],
       private: $("w-private").checked,
@@ -131,14 +140,17 @@ function resetForm() {
   state.editing = null;
   state.usedMic = false;
   state.tags = new Set();
+  state.category = "diary";
   state.date = diaryDateOf(new Date(), cfg().cutoff);
   $("w-body").value = "";
+  $("w-title").value = "";
   $("w-private").checked = false;
   $("w-tidy").checked = false;
   $("w-date").disabled = false;
   $("w-editing").hidden = true;
   store.del(K.draft);
   auLabel();
+  renderKind();
   renderTags();
 }
 
@@ -149,11 +161,14 @@ function restoreDraft() {
   state.date = d.date || diaryDateOf(new Date(), cfg().cutoff);
   state.tags = new Set(d.tags || []);
   state.editing = d.editing || null;
+  state.category = d.category || "diary";
+  $("w-title").value = d.title || "";
   $("w-body").value = d.body || "";
   $("w-private").checked = !!d.private;
   $("w-tidy").checked = !!d.tidy;
   showEditing();
   auLabel();
+  renderKind();
   renderTags();
   if (d.body) status("書きかけの下書きを復元しました");
 }
@@ -168,18 +183,22 @@ function showEditing() {
 // ---------------------------------------------------------------
 // 保存
 // ---------------------------------------------------------------
-async function nextFreePath(date) {
+async function nextFreePath(date, category) {
   const taken = new Set(await listPaths(`_posts/${date}`));
   for (let i = 2; ; i++) {
-    const p = `_posts/${date}-diary-${i}.md`;
+    const p = `_posts/${date}-${category}-${i}.md`;
     if (!taken.has(p)) return p;
   }
 }
 
+function titleValue() {
+  return state.category === "diary" ? describe(state.date).label : $("w-title").value.trim();
+}
+
 function newFrontMatter() {
   const fm = [
-    { key: "title", value: describe(state.date).label },
-    { key: "category", value: "diary" },
+    { key: "title", value: titleValue() },
+    { key: "category", value: state.category },
     { key: "tags", value: [...state.tags] },
   ];
   if ($("w-private").checked) fm.push({ key: "private", value: "true" });
@@ -190,12 +209,13 @@ function newFrontMatter() {
 async function save() {
   const body = $("w-body").value.trim();
   if (!body) return status("本文が空です", "error");
+  if (state.category !== "diary" && !$("w-title").value.trim()) return status("タイトルを入れてください", "error");
   const btn = $("w-save");
   btn.disabled = true;
   status("保存しています…");
   try {
     const tidy = $("w-tidy").checked;
-    const label = describe(state.date).label;
+    const label = titleValue();
     let path, mode, fm, text, sha;
 
     if (state.editing) {
@@ -205,11 +225,13 @@ async function save() {
       fmSet(fm, "tags", [...(state.editing.hiddenTags || []), ...state.tags]);
       fmSet(fm, "private", $("w-private").checked ? "true" : undefined);
       fmSet(fm, "published", undefined);
+      fmSet(fm, "category", state.category);
+      fmSet(fm, "title", titleValue());
       text = body;
     } else {
-      path = `_posts/${state.date}-diary.md`;
+      path = `_posts/${state.date}-${state.category}.md`;
       const existing = await getFile(path);
-      if (existing && confirm(`${label}の日記はもうあります。続きとして追記しますか？\n（キャンセルで別の日記として保存）`)) {
+      if (existing && state.category === "diary" && confirm(`${label}の日記はもうあります。続きとして追記しますか？\n（キャンセルで別の日記として保存）`)) {
         mode = "append";
         sha = existing.sha;
         const doc = parseDoc(existing.text);
@@ -220,7 +242,7 @@ async function save() {
         text = `${doc.body.replace(/\s+$/, "")}\n\n${body}`;
       } else {
         mode = "new";
-        if (existing) path = await nextFreePath(state.date);
+        if (existing) path = await nextFreePath(state.date, state.category);
         fm = newFrontMatter();
         text = body;
       }
@@ -231,6 +253,7 @@ async function save() {
       const inbox = [
         { key: "target", value: path },
         { key: "mode", value: mode },
+        { key: "provider", value: cfg().provider },
         ...fm.map((e) => ({ key: `fm_${e.key}`, value: e.value })),
       ];
       const stamp = localTimestamp().slice(11, 19).replace(/:/g, "");
@@ -272,8 +295,9 @@ async function loadRecent() {
         .map((p) => {
           const iso = p.slice(7, 17);
           const d = describe(iso);
+          const kind = /-review(-\d+)?\.md$/.test(p) ? "感想 · " : "";
           return `<li><button type="button" class="w-recent-item" data-path="${esc(p)}">
-            <span class="au">${d.label}</span><span class="date">${d.y}.${d.m}.${d.d} ${d.weekday}</span></button></li>`;
+            <span class="au">${kind}${d.label}</span><span class="date">${d.y}.${d.m}.${d.d} ${d.weekday}</span></button></li>`;
         })
         .join("");
   } catch (e) {
@@ -293,11 +317,14 @@ async function openForEdit(path) {
     // 旧サイトの "2022/07" のような日付タグは残したまま、画面には出さない
     state.editing = { path, sha: f.sha, fm, hiddenTags: tags.filter((t) => !state.tags.has(t)) };
     state.date = path.slice(7, 17);
+    state.category = fmGet(fm, "category") || "diary";
+    $("w-title").value = state.category === "diary" ? "" : fmGet(fm, "title") || "";
     $("w-body").value = body.replace(/^\n+/, "").replace(/\s+$/, "");
     $("w-private").checked = fmGet(fm, "private") === "true" || fmGet(fm, "published") === "false";
     $("w-tidy").checked = false;
     showEditing();
     auLabel();
+    renderKind();
     renderTags();
     saveDraft();
     status("");
@@ -420,6 +447,7 @@ function setupSettings() {
     $("s-repo").value = `${c.owner}/${c.name}`;
     $("s-branch").value = c.branch;
     $("s-cutoff").value = String(c.cutoff);
+    $("s-provider").value = c.provider;
     $("s-status").textContent = "";
     dlg.showModal();
   };
@@ -428,6 +456,7 @@ function setupSettings() {
     store.set(K.repo, $("s-repo").value.trim() || "natsufuna/natsufuna.github.io");
     store.set(K.branch, $("s-branch").value.trim() || "master");
     store.set(K.cutoff, $("s-cutoff").value);
+    store.set(K.provider, $("s-provider").value);
   };
   $("w-open-settings").addEventListener("click", open);
   dlg.addEventListener("close", () => {
@@ -493,6 +522,10 @@ $("w-tag-input").addEventListener("keydown", (ev) => {
   saveDraft();
 });
 $("w-body").addEventListener("input", saveDraft);
+$("w-title").addEventListener("input", saveDraft);
+for (const r of document.querySelectorAll('input[name="w-kind"]')) {
+  r.addEventListener("change", () => { state.category = r.value; renderKind(); saveDraft(); });
+}
 $("w-private").addEventListener("change", saveDraft);
 $("w-tidy").addEventListener("change", saveDraft);
 $("w-photo").addEventListener("change", (ev) => { const files = [...ev.target.files]; ev.target.value = ""; if (files.length) addPhotos(files); });
